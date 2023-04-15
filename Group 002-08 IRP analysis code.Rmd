@@ -1,0 +1,81 @@
+---
+title: "Lab Data Analysis"
+author: "Braeden Grenier"
+date: "2023-04-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+dat = read.csv("plottingnoacetone.csv")
+dat
+```
+
+#Loading the libraries necessary to run the code
+```{r}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+```
+
+
+#GRAPHING
+
+##Some Calculations
+```{r}
+dat = dat %>% mutate(dat,
+  Concentration_in_plate = AbsorbanceCorrected / (30000 * 0.5),
+  Mol_in_plate = Concentration_in_plate * 0.2,
+  Anthocyanin_in_root = Mol_in_plate/Sample.Weight
+)
+dat
+```
+The above code generates 3 important values for our data, Concentration of anthocyanin in the microplate, the absolute amount of mols in the microplate, and the anthocyanin per gram of root tissue 
+
+##Graphing
+```{r}
+ggplot(data = testdat, aes(x = Treatment, y = AbsorbanceCorrected, fill = Treatment)) + geom_boxplot() + xlab("Treatment") + ylab("Absorbance (L × mol-1 × cm-1)") + ggtitle("Absorbance Values of Homogenized Root Sample") + ylim(min = -0.03, max = 0.4)
+```
+
+
+```{r}
+ggplot(data = dat, aes(x = Treatment, y = Anthocyanin_in_root, fill = Treatment)) + geom_boxplot() + ylim(min = 0, max = 3e-05) + xlab("Treatment") + ylab("Anthocyanin content (mol/g)") + ggtitle("Anthocyanin Content in Radish Root Tissue")
+```
+This ggplot is y limited between 0 and 3e-05 for better data visualization, it should be noted there are two extreme values in the PC treatment, one is below zero which is not a physically coherent value (negative concentration isn't really a thing) and the other is a very high concentration. This data will NOT be removed from the data analysis, as it is likely a result of biological variation; it is only removed here to allow for better visualization among treatments.
+
+
+#STATISTICAL TESTING
+
+##loading the other dataframe and running calculations
+```{r}
+testdat = read.csv("IRP Lab Data.csv")
+testdat
+
+testdat = testdat %>% mutate(testdat,
+  Concentration_in_plate = AbsorbanceCorrected / (30000 * 0.5),
+  Mol_in_plate = Concentration_in_plate * 0.2,
+  Anthocyanin_in_root = Mol_in_plate/Sample.Weight
+)
+testdat #this data contains the 80% acetone we put in the plate to test for significant differences between the acetone and the samples. I just created two seperate CSVs, one with and without this data. The acetone data kept making the boxplot ugly, and I was unable to seperate the data in a clean manner with RStudio, hence the two dataframes.
+```
+Running a one way anova for the comparison of means amongst several groups
+
+##ANOVA of corrected absorbance values
+```{r}
+corabsaov = aov(testdat$AbsorbanceCorrected ~ testdat$Treatment, data = testdat)
+summary(corabsaov)
+
+TukeyHSD(corabsaov)
+```
+
+##ANOVA of the concentrations
+```{r}
+concaov = aov(Anthocyanin_in_root ~ Treatment, data = dat)
+summary(concaov)
+
+TukeyHSD(concaov)
+```
+
